@@ -36,12 +36,8 @@ class Order
         end
       end
 
-   
-  
       total_price = min_cost[quantity.to_i]
       if total_price.infinite?
-        items = order.scan(/\d+\s\w+/)
-        result = []
       
         items.each do |item|
           quantity, format = item.split(' ')
@@ -89,15 +85,13 @@ class Order
               remaining_quantity -= best_bundle.quantity
             end
           end
-      
-          breakdown = "#{bundle_count.map { |bundle, count| "#{format}: #{count}pcs of bundle #{quantity}" }.join(', ')} #{format} $#{'%.2f' % total_price}"
-          result << "\n#{breakdown}"
+          breakdown = bundle_count.map  { |quantity, count| "#{format}: #{count}pcs of bundle #{quantity.quantity}" }.join(', ')
+          result << "\n#{breakdown}, Total: $#{'%.2f' % total_price}"
         end
-
+      else
+        breakdown = generate_bundle_breakdown(quantity.to_i, bundle_used, total_price, format)
+        result << "\n#{breakdown}, Total: $#{'%.2f' % total_price}"
       end
-      breakdown = generate_bundle_breakdown(quantity.to_i, bundle_used, total_price, format)
-
-      result << "\n#{breakdown}, Total: $#{'%.2f' % total_price}"
     end
 
     result.join(', ')
@@ -115,69 +109,8 @@ class Order
       remainder -= bundle.quantity
     end
 
-    if used_bundles.empty?
-    else
-      breakdown = used_bundles.map { |quantity, count| "#{format}: #{count}pcs of bundle #{quantity}" }.join(', ')
-      breakdown += " (Remainder: #{remainder})" if remainder > 0
-    end
-
+    breakdown = used_bundles.map { |quantity, count| "#{format}: #{count}pcs of bundle #{quantity}" }.join(', ')
     breakdown
-  end
-  def self.remainder(order)
-    items = order.scan(/\d+\s\w+/)
-    result = []
-  
-    items.each do |item|
-      quantity, format = item.split(' ')
-      bundles = BUNDLES[format].sort_by(&:quantity).reverse
-  
-      total_price = 0
-      bundle_count = Hash.new(0)
-  
-      remaining_quantity = quantity.to_i
-  
-      perfect_bundle_combination = nil
-  
-      (1..remaining_quantity).each do |count|
-        bundle_combination = bundles.combination(count).find do |bundles_combo|
-          bundles_combo.sum(&:quantity) == remaining_quantity
-        end
-  
-        if bundle_combination
-          perfect_bundle_combination = bundle_combination
-          break
-        end
-      end
-  
-      if perfect_bundle_combination
-        perfect_bundle_combination.each do |bundle|
-          bundle_count[bundle] += 1
-          total_price += bundle.price
-          remaining_quantity -= bundle.quantity
-        end
-      else
-        while remaining_quantity > 0
-          best_bundle = nil
-  
-          bundles.each do |bundle|
-            if bundle.quantity <= remaining_quantity
-              best_bundle = bundle
-              break
-            end
-          end
-  
-          break unless best_bundle
-  
-          bundle_count[best_bundle] += 1
-          total_price += best_bundle.price
-          remaining_quantity -= best_bundle.quantity
-        end
-      end
-  
-      result << "#{bundle_count.map { |bundle, count| "#{count} x #{bundle.quantity}" }.join(', ')} #{format} $#{'%.2f' % total_price}"
-    end
-  
-    result.join(', ')
   end
 
   def self.input_order
